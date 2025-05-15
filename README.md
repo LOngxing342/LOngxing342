@@ -1,37 +1,33 @@
-- 👋 Hi, I’m @LOngxing342
-- 👀 I’m interested in ...
-- 🌱 I’m currently learning ...
-- 💞️ I’m looking to collaborate on ...
-- 📫 How to reach me ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
+# Flask app to handle incoming calls
+from flask import Flask, request, abort
+from twilio.twiml.voice_response import VoiceResponse
+import time
 
-<!---
-LOngxing342/LOngxing342 is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-You can click the Preview link to take a look at your changes.
---->
-from twilio.rest import Client
+app = Flask(__name__)
 
-account_sid = 'your_account_sid'
-auth_token = 'your_auth_token'
-client = Client(account_sid, auth_token)
+# Simple in-memory call tracker (use Redis or DB in production)
+call_log = {}
 
-client.incoming_phone_numbers('PNXXXX').update(voice_url='http://example.com/block')
+@app.route("/voice", methods=['POST'])
+def voice():
+    from_number = request.form.get('From')
+    now = time.time()
+    
+    if from_number not in call_log:
+        call_log[from_number] = []
+    
+    # Keep only calls from the last 60 seconds
+    call_log[from_number] = [t for t in call_log[from_number] if now - t < 60]
+    
+    if len(call_log[from_number]) >= 3:
+        abort(403)  # Block excessive calls
 
+    call_log[from_number].append(now)
 
-from twilio.rest import Client
+    response = VoiceResponse()
+    response.say("Hello, this is your secure service.")
+    return str(response)
 
-# Your Twilio credentials (use environment variables in production!)
-account_sid = 'your_account_sid'
-auth_token = 'your_auth_token'
+if __name__ == "__main__":
+    app.run(debug=True)
 
-# Initialize the Twilio client
-client = Client(account_sid, auth_token)
-
-# Update the voice URL of a specific Twilio phone number
-phone_number_sid = 'PNXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'  # Replace with your PhoneNumber SID
-new_voice_url = 'https://example.com/your-voice-handler'  # Must be a public HTTPS URL
-
-client.incoming_phone_numbers(phone_number_sid).update(voice_url=new_voice_url)
-
-print(f"Voice URL updated for {phone_number_sid}")
